@@ -124,16 +124,28 @@ async function handleSend() {
                 return;
             }
 
-            currentTicket = res.ticket;
-            addMessage("I've generated a draft for you. Does this look correct, or would you like to make changes?");
-            renderTicketPreview(currentTicket);
-            
-            currentState = 'PREVIEWING';
-            setActionButtons([
-                { label: '🚀 Create in Jira', action: finalizeTicket },
-                { label: '🔄 Start Over', action: resetApp }
-            ]);
-            userInput.placeholder = "Tell me what to change (e.g., 'Make it high priority')...";
+            if (res.is_multi_ticket && res.tickets && res.tickets.length > 0) {
+                documentTickets = res.tickets;
+                addMessage(`I've found and generated drafts for ${res.tickets.length} tickets. Please select which ones you want to create in Jira:`);
+                renderDocumentTicketList(res.tickets);
+                currentState = 'SELECTING';
+                setActionButtons([
+                    { label: 'Create Selected', action: createSelectedFromDocument },
+                    { label: 'Cancel', action: resetApp }
+                ]);
+                userInput.placeholder = "e.g., Fix the login timeout bug...";
+            } else {
+                currentTicket = res.ticket;
+                addMessage("I've generated a draft for you. Does this look correct, or would you like to make changes?");
+                renderTicketPreview(currentTicket);
+                
+                currentState = 'PREVIEWING';
+                setActionButtons([
+                    { label: '🚀 Create in Jira', action: finalizeTicket },
+                    { label: '🔄 Start Over', action: resetApp }
+                ]);
+                userInput.placeholder = "Tell me what to change (e.g., 'Make it high priority')...";
+            }
 
         } else if (currentState === 'PREVIEWING') {
             // Step 2: Update existing ticket with feedback

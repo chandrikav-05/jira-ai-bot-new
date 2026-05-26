@@ -26,38 +26,60 @@ TICKET_SCHEMA = """
 
 def generate_ticket_from_text(user_text: str) -> dict:
     """
-    Takes user's free text input, determines if it is a greeting/general inquiry.
-    If so, returns a polite greeting response.
-    Otherwise, generates a full Jira ticket using GPT-4o-mini.
-    Returns a dict with keys: is_greeting, greeting_message, ticket.
+    Takes user's free text input, determines if it is a greeting/general inquiry,
+    a single Jira ticket request, or a request to create multiple tickets (e.g., an Epic with child tasks,
+    or a list of multiple distinct tasks).
+    Returns a dict with keys: is_greeting, greeting_message, is_multi_ticket, ticket, tickets.
     """
     prompt = f"""
 You are a Jira ticket creation assistant.
 First, analyze the user's input.
-Determine if the user's input is a greeting (e.g., "hi", "hello", "hey", "good morning"), a general question/pleasantry (e.g., "how are you", "what's up", "who are you"), or a general question about your capabilities (e.g., "what can you do?", "help", "how does this work").
+Determine if the user's input is:
+1. A greeting (e.g., "hi", "hello", "hey", "good morning"), a general question/pleasantry (e.g., "how are you", "what's up", "who are you"), or a general question about your capabilities (e.g., "what can you do?", "help", "how does this work").
+2. A request that describes MULTIPLE tasks, a project plan, or an Epic with sub-tasks/linked tasks.
+3. A single task, bug, story, or ticket request.
 
 If the input is a greeting, pleasantry, or capability question:
 - Set "is_greeting" to true.
-- Set "greeting_message" to a polite, friendly, and helpful response. Greet them warmly and politely, briefly mention how you can help (creating/updating Jira tickets or parsing documents), and ask how you can assist them today.
+- Set "greeting_message" to a polite, friendly, and helpful response. Greet them warmly and politely, briefly mention how you can help, and ask how you can assist them today.
+- Set "is_multi_ticket" to false.
 - Set "ticket" to null.
+- Set "tickets" to null.
 
-If the input is a description of a task, work item, or request to create/generate a ticket:
+If the input describes MULTIPLE distinct tasks, an Epic with child tasks, or a set of different tasks to be created:
 - Set "is_greeting" to false.
 - Set "greeting_message" to "".
-- Set "ticket" to a JSON object representing the generated Jira ticket based on the rules below.
+- Set "is_multi_ticket" to true.
+- Set "ticket" to null.
+- Set "tickets" to an array of ticket objects representing all the tasks/epics to be created.
+- Establish the hierarchy using "temp_id" and "temp_parent_id".
+  For example, if an Epic has tasks:
+    - Epic ticket: temp_id="E1", temp_parent_id=""
+    - Task 1: temp_id="T1", temp_parent_id="E1"
+    - Task 2: temp_id="T2", temp_parent_id="E1"
 
-Ticket Generation Rules (only apply if "is_greeting" is false):
+If the input describes a SINGLE task, bug, story, epic, or ticket request:
+- Set "is_greeting" to false.
+- Set "greeting_message" to "".
+- Set "is_multi_ticket" to false.
+- Set "ticket" to a single ticket object.
+- Set "tickets" to null.
+
+Ticket Generation Rules (apply to both "ticket" and items in "tickets"):
 Default project key if not mentioned: {DEFAULT_PROJECT_KEY}
 Today's date: {datetime.now().strftime("%A, %d %B %Y")}
 Ticket Schema:
 {TICKET_SCHEMA}
 
 Rules for Ticket Generation:
-- Generate a professional, clear summary (not more than 10 words)
+- Generate a professional, clear summary (not more than 10 words).
+- The summary must represent the feature, bug, or topic itself, NOT the action or request phrase (do NOT prefix with "Create epic for", "Create task for", "Create", "Implement", "Build", "Add", "create an epic", etc.).
+- If the user provides a title/name in quotes (e.g., "Testing Document-Reader" or "Zoho crm Existing customer checking chatbot"), use the exact content inside the quotes as the summary.
+- Do NOT include the issue type name (like "Epic", "Task", "Subtask", "Story", "Bug") inside the summary itself.
 - Generate a comprehensive, professional description based on the user's input. 
 - If the user asks for bullet points, expansion, or specific additions, implement them clearly in the description.
 - NEVER include the parent ticket number or epic ID (e.g., AP-115) in the "description" field; keep it strictly for the task details.
-- Detect issue type from context: words like "fix", "crash", "error" = Bug; "build", "create", "implement" = Task or Story; "document", "write" = Task; if "under" or "child of" an EPIC is mentioned, use Task; if "under" or "child of" a TASK is mentioned, use Subtask
+- Detect issue type from context: words like "fix", "crash", "error" = Bug; "build", "create", "implement" = Task or Story; "document", "write" = Task; if "under" or "child of" an EPIC is mentioned, use Task; if "under" or "child of" a TASK is mentioned, use Subtask. If an Epic is explicitly requested, use Epic.
 - Detect priority from urgency words: "urgent", "ASAP", "critical", "high" = High; "low", "minor", "whenever" = Low; else = Medium
 - Extract emails exactly as mentioned
 - Convert date references like "15th May", "next Friday", "end of month" to DD-MM-YYYY format using current year 2026
@@ -74,7 +96,9 @@ Return ONLY a valid JSON object in this exact format:
 {{
   "is_greeting": boolean,
   "greeting_message": "string",
-  "ticket": ticket_object_or_null
+  "is_multi_ticket": boolean,
+  "ticket": ticket_object_or_null,
+  "tickets": array_of_ticket_objects_or_null
 }}
 
 Return ONLY valid JSON. No explanation. No markdown. No extra text.

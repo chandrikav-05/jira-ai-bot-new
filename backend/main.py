@@ -46,7 +46,9 @@ async def generate_ticket(payload: TextInput):
             "success": True,
             "is_greeting": result.get("is_greeting", False),
             "greeting_message": result.get("greeting_message", ""),
-            "ticket": result.get("ticket")
+            "is_multi_ticket": result.get("is_multi_ticket", False),
+            "ticket": result.get("ticket"),
+            "tickets": result.get("tickets")
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
