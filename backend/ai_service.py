@@ -26,20 +26,33 @@ TICKET_SCHEMA = """
 
 def generate_ticket_from_text(user_text: str) -> dict:
     """
-    Takes user's free text input and generates a full Jira ticket using GPT-4o-mini.
-    Returns a single ticket dict.
+    Takes user's free text input, determines if it is a greeting/general inquiry.
+    If so, returns a polite greeting response.
+    Otherwise, generates a full Jira ticket using GPT-4o-mini.
+    Returns a dict with keys: is_greeting, greeting_message, ticket.
     """
     prompt = f"""
-You are a Jira ticket creation assistant. The user will describe a task in plain English.
-Your job is to extract all relevant information and generate a complete Jira ticket.
+You are a Jira ticket creation assistant.
+First, analyze the user's input.
+Determine if the user's input is a greeting (e.g., "hi", "hello", "hey", "good morning"), a general question/pleasantry (e.g., "how are you", "what's up", "who are you"), or a general question about your capabilities (e.g., "what can you do?", "help", "how does this work").
 
+If the input is a greeting, pleasantry, or capability question:
+- Set "is_greeting" to true.
+- Set "greeting_message" to a polite, friendly, and helpful response. Greet them warmly and politely, briefly mention how you can help (creating/updating Jira tickets or parsing documents), and ask how you can assist them today.
+- Set "ticket" to null.
+
+If the input is a description of a task, work item, or request to create/generate a ticket:
+- Set "is_greeting" to false.
+- Set "greeting_message" to "".
+- Set "ticket" to a JSON object representing the generated Jira ticket based on the rules below.
+
+Ticket Generation Rules (only apply if "is_greeting" is false):
 Default project key if not mentioned: {DEFAULT_PROJECT_KEY}
 Today's date: {datetime.now().strftime("%A, %d %B %Y")}
-
-Return ONLY a valid JSON object with exactly these fields:
+Ticket Schema:
 {TICKET_SCHEMA}
 
-Rules:
+Rules for Ticket Generation:
 - Generate a professional, clear summary (not more than 10 words)
 - Generate a comprehensive, professional description based on the user's input. 
 - If the user asks for bullet points, expansion, or specific additions, implement them clearly in the description.
@@ -56,6 +69,13 @@ Rules:
 
 User input:
 {user_text}
+
+Return ONLY a valid JSON object in this exact format:
+{{
+  "is_greeting": boolean,
+  "greeting_message": "string",
+  "ticket": ticket_object_or_null
+}}
 
 Return ONLY valid JSON. No explanation. No markdown. No extra text.
 """

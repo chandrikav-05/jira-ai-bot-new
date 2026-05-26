@@ -118,6 +118,12 @@ async function handleSend() {
             const res = await apiPost('/generate-ticket', { user_text: text });
             loader.remove();
             
+            if (res.is_greeting) {
+                addMessage(res.greeting_message, 'bot');
+                currentState = 'IDLE';
+                return;
+            }
+
             currentTicket = res.ticket;
             addMessage("I've generated a draft for you. Does this look correct, or would you like to make changes?");
             renderTicketPreview(currentTicket);
