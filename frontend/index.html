@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jira AI Assistant | Automate Your Workflow</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="32" height="32" rx="8" fill="#4C6EF5"/>
+                    <path d="M10 10H22V13H10V10ZM10 16H22V19H10V16ZM10 22H18V25H10V22Z" fill="white"/>
+                </svg>
+                Jira <span>AI Bot</span>
+            </div>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                AI Agent Active
+            </div>
+        </header>
+
+        <main id="chat-window" class="app-view">
+            <!-- Initial Greeting -->
+            <div class="message bot">
+                Hello! I'm your Jira AI assistant. You can describe a task in plain English, 
+                or upload a document to extract multiple tickets at once. 
+                What would you like to build today?
+            </div>
+        </main>
+
+        <section class="input-area">
+            <div id="action-buttons" class="secondary-actions" style="display: none;">
+                <!-- Dynamically populated buttons (Add Ticket, Reset, etc.) -->
+            </div>
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="e.g., Fix the login timeout bug in production..." autocomplete="off">
+                <button id="send-btn">
+                    <span>Send</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+            <div class="secondary-actions">
+                <button class="btn-secondary" id="upload-trigger">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Upload Document
+                </button>
+                <input type="file" id="file-input" accept=".pdf,.docx,.txt">
+            </div>
+        </section>
+    </div>
+
+    <!-- Template for Ticket Preview (Hidden) -->
+    <template id="ticket-template">
+        <div class="ticket-preview">
+            <div class="ticket-header">
+                <div class="ticket-id">Preview</div>
+                <div class="ticket-badge">TASK</div>
+            </div>
+            <div class="ticket-summary">Summary goes here</div>
+            <div class="ticket-desc">Description goes here</div>
+            <div class="ticket-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Priority</span>
+                    <span class="meta-value priority-val">Medium</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Assignee</span>
+                    <span class="meta-value assignee-val">Unassigned</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Due Date</span>
+                    <span class="meta-value date-val">None</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Project</span>
+                    <span class="meta-value project-val">AP</span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+openai
+jira
+python-dotenv
+pydantic
+python-multipart
+PyMuPDF
+python-docx
