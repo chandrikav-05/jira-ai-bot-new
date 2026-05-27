@@ -36,64 +36,64 @@ def generate_rich_description(summary: str, issue_type: str, context: str) -> st
     if issue_type_lower == "epic":
         template_instruction = """
 Generate a clean, structured description for a Jira EPIC using this exact layout:
-# Overview
+**Overview**
 [Brief overview of the Epic and what it accomplishes]
 
-# Business Goal
+**Business Goal**
 - [Goal 1]
 - [Goal 2]
 
-# In Scope
+**In Scope**
 - [Scope item 1]
 - [Scope item 2]
 
-# Out of Scope
+**Out of Scope**
 - [Out of scope item 1 or "N/A" if none]
 """
     elif issue_type_lower == "bug":
         template_instruction = """
 Generate a clean, structured description for a Jira BUG using this exact layout:
-# Overview
+**Overview**
 [Short summary of the bug and its impact]
 
-# Steps to Reproduce
+**Steps to Reproduce**
 1. [Step 1]
 2. [Step 2]
 
-# Expected Behavior
+**Expected Behavior**
 [What should have happened]
 
-# Actual Behavior
+**Actual Behavior**
 [What actually happened/error message]
 
-# Environment
+**Environment**
 - [Browser/OS details if mentioned, otherwise "N/A"]
 """
     elif issue_type_lower in ["story", "task"]:
         template_instruction = """
 Generate a clean, structured description for a Jira STORY/TASK using this exact layout:
-# User Story
+**User Story**
 As a [User Role / Persona],
 I want to [Action / Feature],
 So that [Benefit / Goal].
 
-# Acceptance Criteria
-- [ ] [Criteria 1]
-- [ ] [Criteria 2]
+**Acceptance Criteria**
+- [Criteria 1]
+- [Criteria 2]
 
-# Technical / Implementation Details
+**Technical / Implementation Details**
 - [Detail 1]
 - [Detail 2]
 """
     else:  # Subtask or default
         template_instruction = """
 Generate a clean, structured description for a Jira SUBTASK using this exact layout:
-# Goal
+**Goal**
 [Clear technical objective of this subtask]
 
-# Checklist / Tasks
-- [ ] [Task 1]
-- [ ] [Task 2]
+**Checklist / Tasks**
+- [Task 1]
+- [Task 2]
 """
 
     prompt = f"""
@@ -111,9 +111,9 @@ Guidelines:
 1. Ensure the description is completely professional and detailed, corresponding ONLY to the given Ticket Summary: "{summary}".
 2. Do NOT describe or include requirements/scope for other tasks, epics, or features mentioned in the Context/Explanation, unless they are directly relevant context or dependencies for "{summary}". The User Story, Acceptance Criteria, and Technical Details MUST be entirely specific to "{summary}".
 3. If some sections in the template are not mentioned or cannot be inferred from the context specifically for "{summary}", write a reasonable, professional placeholder/draft or state "TBD".
-4. Use proper Markdown headers (# for main headers, - [ ] for checklists, - for bullet points).
+4. Use bold text for headings (e.g., **User Story**, **Acceptance Criteria**). Do NOT use # headers. Use - for bullet points, and do NOT use brackets like [ ] or checkboxes in acceptance criteria or tasks.
 5. NEVER include any parent ticket IDs (e.g., AP-123) in the description text itself.
-6. Return ONLY the markdown description. Do not wrap in ```markdown blocks, and do not add any intro or outro text.
+6. Return ONLY the description. Do not wrap in ```markdown blocks, and do not add any intro or outro text.
 """
     try:
         response = client.chat.completions.create(
@@ -259,6 +259,7 @@ Rules:
 - Apply the changes the user requested (e.g., expand the description, convert to bullet points, add specific details, or modify any other field).
 - Maintain a high-quality, professional tone.
 - NEVER include parent ticket IDs or epic IDs in the "description" field.
+- If modifying the description, ensure all headings are in bold (e.g., **User Story**) rather than using '#' characters, and ensure acceptance criteria or checklists use standard bullet points (- ) without brackets like [ ] or checkboxes.
 - Keep all fields that were not mentioned in the feedback exactly the same.
 
 Return ONLY valid JSON. No explanation. No markdown.
