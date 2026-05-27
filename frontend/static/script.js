@@ -247,9 +247,26 @@ function renderDocumentTicketList(tickets) {
         item.className = 'document-item selected'; // Default selected
         item.dataset.index = i;
         item.innerHTML = `
-            <div class="checkbox"></div>
-            <div style="font-weight:600; margin-bottom:4px;">${t.summary}</div>
-            <div style="font-size:0.8rem; color:var(--text-dim);">${t.issue_type} | ${t.priority}</div>
+            <div class="document-item-main">
+                <div class="checkbox"></div>
+                <div class="ticket-info">
+                    <div class="ticket-summary-title">${t.summary}</div>
+                    <div class="ticket-meta-badges">
+                        <span class="ticket-badge badge-${(t.issue_type || 'task').toLowerCase()}">${(t.issue_type || 'Task').toUpperCase()}</span>
+                        <span class="priority-badge">Priority: ${t.priority}</span>
+                        ${t.assignee_email ? `<span class="assignee-badge">👤 ${t.assignee_email}</span>` : ''}
+                        ${t.due_date ? `<span class="due-badge">📅 ${t.due_date}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                <button class="toggle-details-btn" onclick="event.stopPropagation(); toggleDetails(${i})">👁️ View Description</button>
+            </div>
+            <div class="ticket-details-drawer" id="details-drawer-${i}" style="display: none;" onclick="event.stopPropagation();">
+                <div class="details-content">
+                    <div class="details-desc">${t.description || 'No description provided.'}</div>
+                </div>
+            </div>
         `;
         item.onclick = () => item.classList.toggle('selected');
         grid.appendChild(item);
@@ -258,6 +275,18 @@ function renderDocumentTicketList(tickets) {
     chatWindow.appendChild(grid);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
+
+window.toggleDetails = function(index) {
+    const drawer = document.getElementById(`details-drawer-${index}`);
+    const btn = drawer.parentElement.querySelector('.toggle-details-btn');
+    if (drawer.style.display === 'none') {
+        drawer.style.display = 'block';
+        btn.textContent = '🔒 Hide Description';
+    } else {
+        drawer.style.display = 'none';
+        btn.textContent = '👁️ View Description';
+    }
+};
 
 async function createSelectedFromDocument() {
     const selectedIndices = Array.from(document.querySelectorAll('.document-item.selected'))

@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 from config import OPENAI_API_KEY, DEFAULT_PROJECT_KEY
 
@@ -9,7 +10,7 @@ TICKET_SCHEMA = """
 {
   "project_key":    "string — Jira project key e.g. AP. Use default if not mentioned.",
   "summary":        "string — short clear title for the ticket",
-  "description":    "string — detailed, professional description. Use markdown (bullet points, bolding) where appropriate. DO NOT mention parent ticket IDs (e.g. AP-123) in this field.",
+  "description":    "string — a brief 1-sentence draft of the task details (this will be fully expanded later). DO NOT mention parent ticket IDs (e.g. AP-123) in this field.",
   "issue_type":     "string — one of: Task, Bug, Story, Epic, Subtask",
   "priority":       "string — one of: High, Medium, Low",
   "reporter_email": "string — email of person requesting the ticket, empty if not mentioned",
@@ -22,6 +23,108 @@ TICKET_SCHEMA = """
   "temp_parent_id": "string — the temp_id of the parent ticket (Epic or Task) if it is also being created from this document"
 }
 """
+
+
+def generate_rich_description(summary: str, issue_type: str, context: str) -> str:
+    """
+    Generates a highly structured, professional description based on the issue type
+    and the user's provided explanation/context.
+    """
+    issue_type_lower = issue_type.lower()
+    
+    # Custom template per issue type
+    if issue_type_lower == "epic":
+        template_instruction = """
+Generate a clean, structured description for a Jira EPIC using this exact layout:
+# Overview
+[Brief overview of the Epic and what it accomplishes]
+
+# Business Goal
+- [Goal 1]
+- [Goal 2]
+
+# In Scope
+- [Scope item 1]
+- [Scope item 2]
+
+# Out of Scope
+- [Out of scope item 1 or "N/A" if none]
+"""
+    elif issue_type_lower == "bug":
+        template_instruction = """
+Generate a clean, structured description for a Jira BUG using this exact layout:
+# Overview
+[Short summary of the bug and its impact]
+
+# Steps to Reproduce
+1. [Step 1]
+2. [Step 2]
+
+# Expected Behavior
+[What should have happened]
+
+# Actual Behavior
+[What actually happened/error message]
+
+# Environment
+- [Browser/OS details if mentioned, otherwise "N/A"]
+"""
+    elif issue_type_lower in ["story", "task"]:
+        template_instruction = """
+Generate a clean, structured description for a Jira STORY/TASK using this exact layout:
+# User Story
+As a [User Role / Persona],
+I want to [Action / Feature],
+So that [Benefit / Goal].
+
+# Acceptance Criteria
+- [ ] [Criteria 1]
+- [ ] [Criteria 2]
+
+# Technical / Implementation Details
+- [Detail 1]
+- [Detail 2]
+"""
+    else:  # Subtask or default
+        template_instruction = """
+Generate a clean, structured description for a Jira SUBTASK using this exact layout:
+# Goal
+[Clear technical objective of this subtask]
+
+# Checklist / Tasks
+- [ ] [Task 1]
+- [ ] [Task 2]
+"""
+
+    prompt = f"""
+You are a Jira expert writing a highly professional, detailed ticket description.
+You are given:
+- Issue Type: {issue_type}
+- Ticket Summary: {summary}
+- Context/Explanation:
+{context}
+
+Please write the description for this ticket following this structural template:
+{template_instruction}
+
+Guidelines:
+1. Ensure the description is completely professional and detailed, corresponding ONLY to the given Ticket Summary: "{summary}".
+2. Do NOT describe or include requirements/scope for other tasks, epics, or features mentioned in the Context/Explanation, unless they are directly relevant context or dependencies for "{summary}". The User Story, Acceptance Criteria, and Technical Details MUST be entirely specific to "{summary}".
+3. If some sections in the template are not mentioned or cannot be inferred from the context specifically for "{summary}", write a reasonable, professional placeholder/draft or state "TBD".
+4. Use proper Markdown headers (# for main headers, - [ ] for checklists, - for bullet points).
+5. NEVER include any parent ticket IDs (e.g., AP-123) in the description text itself.
+6. Return ONLY the markdown description. Do not wrap in ```markdown blocks, and do not add any intro or outro text.
+"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[AI Service] Error generating description: {e}")
+        return f"Draft description for {summary}. Details:\n{context}"
 
 
 def generate_ticket_from_text(user_text: str) -> dict:
@@ -80,8 +183,7 @@ Rules for Ticket Generation:
 - The summary must represent the feature, bug, or topic itself, NOT the action or request phrase (do NOT prefix with "Create epic for", "Create task for", "Create", "Implement", "Build", "Add", "create an epic", etc.).
 - If the user provides a title/name in quotes (e.g., "Testing Document-Reader" or "Zoho crm Existing customer checking chatbot"), use the exact content inside the quotes as the summary.
 - Do NOT include the issue type name (like "Epic", "Task", "Subtask", "Story", "Bug") inside the summary itself.
-- Generate a comprehensive, professional description based on the user's input. 
-- If the user asks for bullet points, expansion, or specific additions, implement them clearly in the description.
+- Generate a brief 1-sentence draft of the description. This will be fully expanded in a separate step.
 - NEVER include the parent ticket number or epic ID (e.g., AP-115) in the "description" field; keep it strictly for the task details.
 - Detect issue type from context: words like "fix", "crash", "error" = Bug; "build", "create", "implement" = Task or Story; "document", "write" = Task; if "under" or "child of" an EPIC is mentioned, use Task; if "under" or "child of" a TASK is mentioned, use Subtask. If an Epic is explicitly requested, use Epic.
 - Detect priority from urgency words: "urgent", "ASAP", "critical", "high" = High; "low", "minor", "whenever" = Low; else = Medium
@@ -96,15 +198,6 @@ Rules for Ticket Generation:
 User input:
 {user_text}
 
-Return ONLY a valid JSON object in this exact format:
-{{
-  "is_greeting": boolean,
-  "greeting_message": "string",
-  "is_multi_ticket": boolean,
-  "ticket": ticket_object_or_null,
-  "tickets": array_of_ticket_objects_or_null
-}}
-
 Return ONLY valid JSON. No explanation. No markdown. No extra text.
 """
     response = client.chat.completions.create(
@@ -113,7 +206,37 @@ Return ONLY valid JSON. No explanation. No markdown. No extra text.
         response_format={"type": "json_object"},
         temperature=0.3
     )
-    return json.loads(response.choices[0].message.content)
+    result = json.loads(response.choices[0].message.content)
+
+    # If it is a greeting, return immediately
+    if result.get("is_greeting", False):
+        return result
+
+    # Otherwise, enrich descriptions in a second step
+    if result.get("is_multi_ticket", False) and result.get("tickets"):
+        tickets = result["tickets"]
+        with ThreadPoolExecutor() as executor:
+            # Run description generation in parallel
+            futures = [
+                executor.submit(
+                    generate_rich_description,
+                    t.get("summary", ""),
+                    t.get("issue_type", "Task"),
+                    user_text
+                )
+                for t in tickets
+            ]
+            for t, future in zip(tickets, futures):
+                t["description"] = future.result()
+    elif result.get("ticket"):
+        ticket = result["ticket"]
+        ticket["description"] = generate_rich_description(
+            ticket.get("summary", ""),
+            ticket.get("issue_type", "Task"),
+            user_text
+        )
+
+    return result
 
 
 def apply_changes_to_ticket(current_ticket: dict, feedback: str) -> dict:
@@ -177,7 +300,7 @@ Return ONLY a valid JSON object in this exact format:
 Rules:
 - Extract as many tickets as you find — do not miss any task or work item
 - Each ticket must have a unique, specific summary
-- Write detailed, professional descriptions for each ticket. Use markdown formatting (like bullet points) if it improves clarity.
+- Provide a brief 1-sentence description placeholder. A detailed, structured description will be generated separately.
 - NEVER include parent ticket numbers or IDs in the "description" field.
 - Detect issue type from context for each ticket. Prefer "Task" for items under an Epic, and "Subtask" for items under a Task.
 - Set priority based on context clues in the document
@@ -205,4 +328,21 @@ Return ONLY valid JSON. No explanation. No markdown. No extra text.
         max_tokens=4000
     )
     result = json.loads(response.choices[0].message.content)
-    return result.get("tickets", [])
+    tickets = result.get("tickets", [])
+
+    # Enrich descriptions in parallel
+    if tickets:
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(
+                    generate_rich_description,
+                    t.get("summary", ""),
+                    t.get("issue_type", "Task"),
+                    document_text
+                )
+                for t in tickets
+            ]
+            for t, future in zip(tickets, futures):
+                t["description"] = future.result()
+
+    return tickets

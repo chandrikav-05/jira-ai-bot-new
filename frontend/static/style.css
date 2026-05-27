@@ -387,6 +387,132 @@ button:disabled {
 }
 
 /* Responsive */
+/* Document Grid Item Enhancements */
+.document-item {
+    display: flex;
+    flex-direction: column;
+    padding: 20px !important;
+}
+
+.document-item-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.document-item .checkbox {
+    position: static !important; /* override absolute positioning */
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.ticket-info {
+    flex: 1;
+}
+
+.ticket-summary-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.4;
+}
+
+.ticket-meta-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.priority-badge {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.assignee-badge {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-dim);
+    border: 1px solid var(--glass-border);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.due-badge {
+    background: rgba(76, 110, 245, 0.12);
+    color: var(--primary);
+    border: 1px solid rgba(76, 110, 245, 0.25);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.toggle-details-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    cursor: pointer;
+    color: var(--text-main);
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.toggle-details-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--text-dim);
+}
+
+.ticket-details-drawer {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+    animation: slideDown 0.25s ease-out;
+}
+
+.details-content {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.details-desc {
+    white-space: pre-wrap;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+.details-desc h1, .details-desc h2, .details-desc h3 {
+    color: var(--text-main);
+    margin-top: 10px;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.details-desc ul, .details-desc ol {
+    margin-left: 16px;
+    margin-bottom: 8px;
+}
+
+.details-desc li {
+    margin-bottom: 4px;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 768px) {
     .container {
         height: 95vh;
